@@ -58,20 +58,42 @@
         return `http://${host}:${port}/humidity/`;
       },
 
+      getTodayHumidityUrl() {
+        const host = window.location.hostname;
+        const port = 8000;
+
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+
+        const dateStr = `${year}-${month}-${day}`;
+
+        return `http://${host}:${port}/humidity/by-date/?start_date=${dateStr}`;
+      },
+
       async fetchHumidity() {
         try {
-          const apiUrl = this.getBackendUrl();
+          const apiUrl = this.getTodayHumidityUrl();
           const response = await fetch(apiUrl);
           const data = await response.json();
 
           if (data.length > 0) {
+            // Ordena por timestamp
+            data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
             const last = data[data.length - 1];
             this.humidity = last.value;
             this.lastTimestamp = last.timestamp;
 
-            this.humidityValues = data.slice(-10).map((d) => d.value);
-            this.plantStatus = this.humidity >= 60 ? "YES! 😁" : "No 😢";
-            this.humidityTimestamps = data.slice(-10).map((d) => {
+            const recent = data.slice(-10); // pega os últimos 10, agora ordenados
+
+            this.humidityValues = recent.map((d) => d.value);
+            this.plantStatus =
+              recent[recent.length - 1].value >= 60
+                ? "Your plant is happy! 🌱"
+                : "Your plant is thirsty! 💧";
+            this.humidityTimestamps = recent.map((d) => {
               const date = new Date(d.timestamp);
               return `${date.getHours()}:${date
                 .getMinutes()

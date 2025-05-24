@@ -7,7 +7,28 @@ from sqlalchemy.exc import OperationalError
 from db.database import engine, Base
 from db import models  # ou onde estiver seu HumidityReading etc.
 import time
+from sqlalchemy import text
 
+def ensure_timestamp_is_timestamptz():
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'humidity_readings' 
+              AND column_name = 'timestamp';
+        """))
+        column_type = result.scalar()
+        
+        if column_type != "timestamp with time zone":
+            print("⏳ Corrigindo tipo da coluna 'timestamp'...")
+            conn.execute(text("""
+                ALTER TABLE humidity_readings
+                ALTER COLUMN timestamp TYPE TIMESTAMPTZ
+                USING timestamp::timestamptz;
+            """))
+            print("✅ Tipo da coluna 'timestamp' corrigido.")
+        else:
+            print("✅ Coluna 'timestamp' já está correta.")
 
 app = FastAPI()
 
@@ -37,5 +58,6 @@ def wait_for_db(max_tries=10, delay=2):
 
 wait_for_db()
 Base.metadata.create_all(bind=engine)
+ensure_timestamp_is_timestamptz()
 
 app.include_router(humidity.router)
