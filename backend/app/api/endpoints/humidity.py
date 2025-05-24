@@ -2,11 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from sqlalchemy.orm import Session
 from datetime import datetime
+import pytz
 
 from models.humidity import Humidity, HumidityCreate
 from db.models import HumidityReading
 from db.database import get_db
 
+tz = pytz.timezone("America/Sao_Paulo")
 router = APIRouter(prefix="/humidity", tags=["Humidity Readings"])
 
 @router.get("/", response_model=List[Humidity])
@@ -22,9 +24,10 @@ def read_one(reading_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=Humidity)
 def create(reading: HumidityCreate, db: Session = Depends(get_db)):
+
     new_reading = HumidityReading(
         value=reading.value,
-        timestamp=datetime.now().isoformat()
+        timestamp=datetime.now(tz).isoformat()
     )
     db.add(new_reading)
     db.commit()
@@ -37,7 +40,7 @@ def update(reading_id: int, reading: HumidityCreate, db: Session = Depends(get_d
     if not db_reading:
         raise HTTPException(status_code=404, detail="Reading not found")
     db_reading.value = reading.value
-    db_reading.timestamp = datetime.now().isoformat()
+    db_reading.timestamp = datetime.now(tz).isoformat()
     db.commit()
     db.refresh(db_reading)
     return db_reading
