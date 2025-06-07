@@ -20,4 +20,5 @@ class Plant(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     moisture_threshold = Column(Integer, nullable=False)
+    check_interval = Column(Integer, default=60)  # in minutes
     humidity_readings = relationship("HumidityReading", back_populates="plant")
