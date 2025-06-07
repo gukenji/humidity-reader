@@ -6,8 +6,8 @@
 const char* ssid = "<ssid>"; // Replace with your Wi-Fi SSID
 const char* password = "<password>"; // Replace with your Wi-Fi password
 
-const char* postURL = "http://192.168.15.9:8000/humidity/";
-const char* plantBaseURL = "http://192.168.15.9:8000/plant/"; // plant ID registered in the plant table
+const char* postURL = "http://<server-ip>:8000/humidity/";
+const char* plantBaseURL = "http://<server-ip>:8000/plant/"; // plant ID registered in the plant table
 
 const int moistureSensorPin = 34;
 const int relayPin = 26;
@@ -71,8 +71,8 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(" connected!");
-
-    Plant plant = fetchPlant(<id>); // Replace <id> with the actual plant ID
+    int plant_id = <id>; // Replace <id> with the actual plant ID
+    Plant plant = fetchPlant(plant_id); // Replace <id> with the actual plant ID
 
     int moistureThreshold = plant.moisture_threshold;
     check_interval = plant.check_interval;
@@ -92,7 +92,7 @@ void setup() {
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     http.addHeader("Content-Type", "application/json");
 
-    String jsonData = "{\"value\": " + String(moisturePercent) + "}";
+    String jsonData = "{\"value\": " + String(moisturePercent) + ", \"plant_id\": " + String(plant_id) + "}";
     int httpResponseCode = http.POST(jsonData);
 
     Serial.print("HTTP Response code: ");
