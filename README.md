@@ -76,27 +76,66 @@ Here is the script running on the ESP32:
 ```cpp
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <cstring>
 
-const char* ssid = <ssid>;
-const char* password = <password>;
+const char* ssid = "<ssid>"; // Replace with your Wi-Fi SSID
+const char* password = "<password>"; // Replace with your Wi-Fi password
 
-const char* serverURL = "http://<ip>/humidity/";
+const char* postURL = "http://<server-ip>:8000/humidity/";
+const char* plantBaseURL = "http://<server-ip>:8000/plant/"; // plant ID registered in the plant table
 
 const int moistureSensorPin = 34;
 const int relayPin = 26;
-const int moistureThreshold = 50;
 
 int dryValue = 3200;      // Sensor value when soil is dry
 int wetValue = 1000;      // Sensor value when soil is wet
 
+struct Plant {
+  int moisture_threshold;
+  int check_interval;
+};
+
+int check_interval = 60;
+
+Plant fetchPlant(int id) {
+  HTTPClient http;
+  String plantURL = String(plantBaseURL) + String(id);
+  http.begin(plantURL);
+  int httpCode = http.GET();
+
+  Plant plant = {50, 50};
+
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    Serial.println("Plant response: " + payload);
+
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error) {
+      Serial.println("Failed to parse JSON");
+      return plant; // fallback
+    }
+
+    plant.moisture_threshold = doc["moisture_threshold"].as<int>();
+    plant.check_interval = doc["check_interval"].as<int>();
+
+    http.end();
+  } else {
+    Serial.println("Failed to fetch plant, using default 50");
+    http.end();
+  }
+  return plant;
+}
+
 void setup() {
   Serial.begin(115200);
-  delay(100);  // Short delay to stabilize serial connection
+  delay(100);
 
   pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, LOW);  // Turn relay off
+  digitalWrite(relayPin, LOW);
 
-  // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to Wi-Fi");
   int attempts = 0;
@@ -108,8 +147,12 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(" connected!");
+    int plant_id = <id>; // Replace <id> with the actual plant ID
+    Plant plant = fetchPlant(plant_id); // Replace <id> with the actual plant ID
 
-    // Read sensor
+    int moistureThreshold = plant.moisture_threshold;
+    check_interval = plant.check_interval;
+
     int rawReading = analogRead(moistureSensorPin);
     int moisturePercent = map(rawReading, dryValue, wetValue, 0, 100);
     moisturePercent = constrain(moisturePercent, 0, 100);
@@ -120,13 +163,12 @@ void setup() {
     Serial.print(moisturePercent);
     Serial.println("%");
 
-    // Send data via HTTP POST
     HTTPClient http;
-    http.begin(serverURL);
+    http.begin(postURL);
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     http.addHeader("Content-Type", "application/json");
 
-    String jsonData = "{\"value\": " + String(moisturePercent) + "}";
+    String jsonData = "{\"value\": " + String(moisturePercent) + ", \"plant_id\": " + String(plant_id) + "}";
     int httpResponseCode = http.POST(jsonData);
 
     Serial.print("HTTP Response code: ");
@@ -135,15 +177,12 @@ void setup() {
 
     http.end();
 
-    // Activate pump and keep checking until moisture is sufficient
     if (moisturePercent < moistureThreshold) {
       Serial.println("Soil is dry! Starting irrigation...");
-
-      digitalWrite(relayPin, HIGH);  // Turn pump on
+      digitalWrite(relayPin, HIGH);
 
       while (true) {
-        delay(5000);  // Wait 5 seconds between readings
-
+        delay(5000);
         rawReading = analogRead(moistureSensorPin);
         moisturePercent = map(rawReading, dryValue, wetValue, 0, 100);
         moisturePercent = constrain(moisturePercent, 0, 100);
@@ -158,22 +197,25 @@ void setup() {
         }
       }
 
-      digitalWrite(relayPin, LOW);  // Turn pump off
+      digitalWrite(relayPin, LOW);
     }
 
-    WiFi.disconnect(true);  // Disconnect to save power
+    WiFi.disconnect(true);
   } else {
     Serial.println("Failed to connect to Wi-Fi");
   }
 
-  // Enter Deep Sleep for 10 minutes
-  Serial.println("Entering Deep Sleep for 10 minutes...");
-  esp_sleep_enable_timer_wakeup(10 * 60 * 1000000LL); // 10 minutes in microseconds
+  Serial.println("Entering Deep Sleep for 1 hour...");
+  if (check_interval > 0) {
+    esp_sleep_enable_timer_wakeup(check_interval * 60 * 1000000LL);
+  } else {
+    esp_sleep_enable_timer_wakeup(60 * 60 * 1000000LL);
+  }
   esp_deep_sleep_start();
 }
 
 void loop() {
-  // Will never be called — all logic is in setup()
+  // Not used
 }
 ```
 
