@@ -56,7 +56,7 @@ def update(id: int, request: PlantCreateSchema, db: Session = Depends(get_db)):
     if request.moisture_threshold is not None:
         plant.moisture_threshold = request.moisture_threshold
     if request.check_interval is not None:
-        plant.check_interval = request.moisture_threshold
+        plant.check_interval = request.check_interval
     db.commit()
     db.refresh(plant)
     return plant
