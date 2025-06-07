@@ -21,7 +21,14 @@ This project is an **automatic irrigation system** controlled via Wi-Fi, ideal f
 - The backend (FastAPI + PostgreSQL) stores the data and exposes an API.
 - The frontend (Vue + Vite) displays the latest moisture readings and auto-refreshes.
 - The system activates the **water pump** if the moisture is below a certain threshold.
-- After irrigation, the ESP32 goes into **deep sleep mode for 10 minutes** to save power.
+- After irrigation, the ESP32 goes into **deep sleep mode** for a configurable period to save power.
+
+## 💧 Plant-Specific Configuration
+
+- In the **frontend**, each plant's **moisture threshold** (the minimum moisture level required to activate the relay) and the **check interval** (how often the system checks moisture levels) can be set individually.
+- The settings are saved for each plant, and the system will automatically adjust its watering actions based on those settings.
+- The **check interval** can now be dynamically set through the web interface, so the time the system waits before checking the moisture level again is customizable per plant.
+- Similarly, each plant's **moisture threshold** can be set individually to determine when irrigation should begin.
 
 ## 🔌 Arduino Code Summary
 
@@ -34,12 +41,12 @@ The ESP32 firmware does the following:
    - Wet soil = 1000
 4. Sends the moisture value via HTTP POST to the FastAPI server:
    ```
-   POST http://<ip>/humidity/
-   Body: { "value": moisturePercent }
+   POST http://<server-ip>:8000/humidity/
+   Body: { "value": moisturePercent, "plant_id": plant_id }
    ```
-5. If the soil is too dry (`< 50%`), it activates the water pump using a relay.
-6. The pump runs until the soil reaches sufficient moisture (`>= 50%`).
-7. Disconnects from Wi-Fi and enters **deep sleep for 10 minutes**.
+5. If the soil is too dry, it activates the water pump using a relay.
+6. The pump runs until the soil reaches sufficient moisture.
+7. Disconnects from Wi-Fi and enters **deep sleep for a configurable period**.
 
 ## ⚙️ How to Run the Project
 
@@ -168,7 +175,7 @@ void setup() {
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
     http.addHeader("Content-Type", "application/json");
 
-    String jsonData = "{\"value\": " + String(moisturePercent) + ", \"plant_id\": " + String(plant_id) + "}";
+    String jsonData = "{"value": " + String(moisturePercent) + ", "plant_id": " + String(plant_id) + "}";
     int httpResponseCode = http.POST(jsonData);
 
     Serial.print("HTTP Response code: ");
@@ -205,7 +212,7 @@ void setup() {
     Serial.println("Failed to connect to Wi-Fi");
   }
 
-  Serial.println("Entering Deep Sleep for 1 hour...");
+  Serial.println("Entering Deep Sleep for configurable interval...");
   if (check_interval > 0) {
     esp_sleep_enable_timer_wakeup(check_interval * 60 * 1000000LL);
   } else {
