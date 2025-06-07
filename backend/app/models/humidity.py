@@ -1,16 +1,22 @@
 from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from models.plant import PlantSchema
+from typing import Optional
 
-class HumidityBase(BaseModel):
+
+class HumidityBaseSchema(BaseModel):
     value: float
 
-class HumidityCreate(HumidityBase):
+
+class HumidityCreateSchema(HumidityBaseSchema):
+    plant_id: Optional[int]
     pass
 
-class Humidity(HumidityBase):
+
+class HumiditySchema(HumidityBaseSchema):
     id: int
     timestamp: datetime
-
+    plant: Optional[PlantSchema] = None
+    
     class Config:
         from_attributes = True

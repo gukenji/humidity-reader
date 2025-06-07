@@ -1,13 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.endpoints import humidity
+from api.endpoints import humidity, plant
 from db.database import engine, Base
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-from db.database import engine, Base
-from db import models  # ou onde estiver seu HumidityReading etc.
 import time
-from sqlalchemy import text
+
 
 def ensure_timestamp_is_timestamptz():
     with engine.connect() as conn:
@@ -20,21 +18,22 @@ def ensure_timestamp_is_timestamptz():
         column_type = result.scalar()
         
         if column_type != "timestamp with time zone":
-            print("⏳ Corrigindo tipo da coluna 'timestamp'...")
+            print("⏳ Fixing 'timestamp' column type...")
             conn.execute(text("""
                 ALTER TABLE humidity_readings
                 ALTER COLUMN timestamp TYPE TIMESTAMPTZ
                 USING timestamp::timestamptz;
             """))
-            print("✅ Tipo da coluna 'timestamp' corrigido.")
+            print("✅ 'Timestamp' column type fixed.")
         else:
-            print("✅ Coluna 'timestamp' já está correta.")
+            print("✅ 'Timestamp' column is already correct.")
+
 
 app = FastAPI()
 
+
 app.add_middleware(
     CORSMiddleware,
-    # allow_origins=origins,           # Ou ["*"] se quiser liberar tudo no dev
     allow_credentials=True,
     allow_origin_regex=r"^http://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$",
     allow_methods=["*"],
@@ -47,13 +46,12 @@ def wait_for_db(max_tries=10, delay=2):
         try:
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            print("✅ Banco de dados pronto!")
+            print("✅ DB is ready!!")
             return
-        except OperationalError as e:
-            print(f"⏳ Tentativa {i+1}/{max_tries} - Banco ainda não pronto. Esperando {delay}s...")
+        except OperationalError:
+            print(f"⏳ Attempt {i + 1}/{max_tries} - DB is not ready. Waiting {delay}s...")
             time.sleep(delay)
-    raise Exception("🚨 Falha ao conectar ao banco de dados após várias tentativas.")
-
+    raise Exception("🚨 Failed to connect to the database after multiple attempts.")
 
 
 wait_for_db()
@@ -61,3 +59,4 @@ Base.metadata.create_all(bind=engine)
 ensure_timestamp_is_timestamptz()
 
 app.include_router(humidity.router)
+app.include_router(plant.router)
