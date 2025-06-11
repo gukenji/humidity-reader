@@ -19,8 +19,7 @@
         updateCheckIntervalId: null,
         plantStatus: "Unknown",
         showAlertSeconds: 1200,
-        timeSpan: 3, // Define o valor padrão de 3 dias
-        daysDifference: 3, // Variável para armazenar a quantidade de dias
+        daysDifference: 3,
       };
     },
     methods: {
@@ -56,24 +55,36 @@
         this.showStaleAlert = seconds > this.showAlertSeconds;
       },
 
-      getBackendUrl() {
+      getHumidityUrl() {
         const host = window.location.hostname;
         const port = 8000;
         return `http://${host}:${port}/humidity/`;
       },
-
-      // Função que obtém a URL com base no número de dias
+      getPlantById(id) {
+        const host = window.location.hostname;
+        const port = 8000;
+        return `http://${host}:${port}/plant/${id}`;
+      },
       getTodayHumidityUrl() {
         const host = window.location.hostname;
         const port = 8000;
 
-        const startDate = subtractDays(new Date(), this.daysDifference); // Usando o valor de daysDifference
+        const startDate = subtractDays(new Date(), this.daysDifference);
         const endDate = new Date();
         return `http://${host}:${port}/humidity/data?start_date=${formateDateToString(
           startDate
         )}&end_date=${formateDateToString(endDate)}`;
       },
-
+      async updateCheckInterval(id) {
+        try {
+          const response = await fetch(this.getPlantById(id));
+          const data = await response.json();
+          this.showAlertSeconds = data.check_interval * 60
+          return data.check_interval;
+        } catch (error) {
+          console.error("Error: ", error);
+        }
+      },
       async fetchHumidity() {
         try {
           const apiUrl = this.getTodayHumidityUrl();
@@ -118,9 +129,14 @@
     mounted() {
       this.updateTime();
       this.timeIntervalId = setInterval(this.updateTime, 1000);
-      this.fetchHumidity().then(() => {
+      this.fetchHumidity().then(async () => {
         this.updateTimeSinceLastUpdate();
-        this.intervalId = setInterval(this.fetchHumidity, 1000);
+        this.intervalId = setInterval(() => {
+          this.fetchHumidity();
+          this.updateCheckInterval(1)
+          console.log(this.showAlertSeconds)
+
+        }, 1000);
         this.updateCheckIntervalId = setInterval(
           this.updateTimeSinceLastUpdate,
           1000
@@ -137,9 +153,8 @@
 <template>
   <div class="container">
     <div v-if="showStaleAlert" class="alert">
-      ⚠️ No humidity updates received in the last 10 minutes!
+      ⚠️ No humidity updates received in the last {{this.showAlertSeconds / 60}} minutes!
     </div>
-    <!-- Campo de input para quantidade de dias -->
     <div class="days-input-container">
       <label for="days-difference">Enter the number of days:</label>
       <input
