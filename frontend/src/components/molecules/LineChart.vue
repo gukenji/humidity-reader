@@ -46,7 +46,6 @@
   const chartData = computed(() => {
     const points = pointColors.value;
     const lastColor = points.length > 0 ? points[points.length - 1] : "white";
-
     return {
       labels: props.labels,
       datasets: [

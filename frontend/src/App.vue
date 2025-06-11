@@ -1,5 +1,7 @@
 <script>
   import LineChart from "./components/molecules/LineChart.vue";
+  import { formateDateToString } from "./utils/formatDate";
+  import { subtractDays } from "./utils/subtractDays";
 
   export default {
     components: { LineChart },
@@ -17,6 +19,8 @@
         updateCheckIntervalId: null,
         plantStatus: "Unknown",
         showAlertSeconds: 1200,
+        timeSpan: 3, // Define o valor padrão de 3 dias
+        daysDifference: 3, // Variável para armazenar a quantidade de dias
       };
     },
     methods: {
@@ -58,18 +62,16 @@
         return `http://${host}:${port}/humidity/`;
       },
 
+      // Função que obtém a URL com base no número de dias
       getTodayHumidityUrl() {
         const host = window.location.hostname;
         const port = 8000;
 
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, "0");
-        const day = String(today.getDate()).padStart(2, "0");
-
-        const dateStr = `${year}-${month}-${day}`;
-
-        return `http://${host}:${port}/humidity/by-date/?start_date=${dateStr}`;
+        const startDate = subtractDays(new Date(), this.daysDifference); // Usando o valor de daysDifference
+        const endDate = new Date();
+        return `http://${host}:${port}/humidity/data?start_date=${formateDateToString(
+          startDate
+        )}&end_date=${formateDateToString(endDate)}`;
       },
 
       async fetchHumidity() {
@@ -78,24 +80,26 @@
           const response = await fetch(apiUrl);
           const data = await response.json();
 
+          // Order by timestamp
           if (data.length > 0) {
-            // Ordena por timestamp
             data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             const last = data[data.length - 1];
             this.humidity = last.value;
             this.lastTimestamp = last.timestamp;
 
-            const recent = data.slice(-10); // pega os últimos 10, agora ordenados
+            this.humidityValues = data.map((d) => d.value);
 
-            this.humidityValues = recent.map((d) => d.value);
             this.plantStatus =
-              recent[recent.length - 1].value >= 60
+              data[data.length - 1].value >= 60
                 ? "Your plant is happy! 🌱"
                 : "Your plant is thirsty! 💧";
-            this.humidityTimestamps = recent.map((d) => {
+
+            this.humidityTimestamps = data.map((d) => {
               const date = new Date(d.timestamp);
-              return `${date.getHours()}:${date
+              return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(
+                date.getDate()
+              ).padStart(2, "0")} ${date.getHours()}:${date
                 .getMinutes()
                 .toString()
                 .padStart(2, "0")}`;
@@ -114,8 +118,6 @@
     mounted() {
       this.updateTime();
       this.timeIntervalId = setInterval(this.updateTime, 1000);
-
-      // Primeiro busca os dados, depois inicia os ciclos
       this.fetchHumidity().then(() => {
         this.updateTimeSinceLastUpdate();
         this.intervalId = setInterval(this.fetchHumidity, 1000);
@@ -132,12 +134,23 @@
     },
   };
 </script>
-
 <template>
   <div class="container">
     <div v-if="showStaleAlert" class="alert">
       ⚠️ No humidity updates received in the last 10 minutes!
     </div>
+    <!-- Campo de input para quantidade de dias -->
+    <div class="days-input-container">
+      <label for="days-difference">Enter the number of days:</label>
+      <input
+        type="number"
+        id="days-difference"
+        v-model="daysDifference"
+        min="1"
+        placeholder="Enter days"
+      />
+    </div>
+
     <div class="plant-status-container">
       <h1>Is my plant okay?</h1>
       <h2>{{ plantStatus }}</h2>
@@ -211,7 +224,7 @@
 
   @media (max-width: 600px) {
     .chart-container {
-      max-width: 100%; /* no celular, usa toda a largura */
+      max-width: 100%;
     }
   }
 </style>

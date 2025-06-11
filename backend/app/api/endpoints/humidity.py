@@ -20,7 +20,7 @@ def findAll(db: Session = Depends(get_db)):
     return convert_list_timezone(readings, tz)
 
 
-@router.get("/by-date/", response_model=List[HumiditySchema])
+@router.get("/data", response_model=List[HumiditySchema])
 def findByDate(
     start_date: date = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: date = Query(None, description="Optional end date in YYYY-MM-DD format"),
