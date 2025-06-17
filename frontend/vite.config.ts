@@ -1,10 +1,15 @@
-import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [vue()],
   server: {
-    host: "0.0.0.0", // para que possa ser acessado por outros dispositivos
-    port: 5173, // 👈 Garante que bate com o docker-compose
+    host: "0.0.0.0",
+    port: 5173,
+  },
+  resolve: {
+    alias: {
+      "@": new URL("./src", import.meta.url).pathname,
+    },
   },
 });

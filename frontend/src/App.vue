@@ -1,10 +1,10 @@
 <script>
-  import LineChart from "./components/molecules/LineChart.vue";
-  import { formateDateToString } from "./utils/formatDate";
-  import { subtractDays } from "./utils/subtractDays";
-
+  import LineChart from "@/components/molecules/line-chart.vue";
+  import { formateDateToString } from "@/utils/formatDate";
+  import { subtractDays } from "@/utils/subtractDays";
+  import RegisterPlant from "@/views/RegisterPlant.vue";
   export default {
-    components: { LineChart },
+    components: { LineChart, RegisterPlant },
     data() {
       return {
         humidity: null,
@@ -19,8 +19,9 @@
         updateCheckIntervalId: null,
         plantStatus: "Unknown",
         showAlertSeconds: 1200,
-        timeSpan: 3, // Define o valor padrão de 3 dias
-        daysDifference: 3, // Variável para armazenar a quantidade de dias
+        timeSpan: 3,
+        daysDifference: 3,
+        firstPlant: true,
       };
     },
     methods: {
@@ -62,12 +63,11 @@
         return `http://${host}:${port}/humidity/`;
       },
 
-      // Função que obtém a URL com base no número de dias
       getTodayHumidityUrl() {
         const host = window.location.hostname;
         const port = 8000;
 
-        const startDate = subtractDays(new Date(), this.daysDifference); // Usando o valor de daysDifference
+        const startDate = subtractDays(new Date(), this.daysDifference);
         const endDate = new Date();
         return `http://${host}:${port}/humidity/data?start_date=${formateDateToString(
           startDate
@@ -136,38 +136,42 @@
 </script>
 <template>
   <div class="container">
-    <div v-if="showStaleAlert" class="alert">
-      ⚠️ No humidity updates received in the last 10 minutes!
+    <div v-if="firstPlant">
+      <RegisterPlant />
     </div>
-    <!-- Campo de input para quantidade de dias -->
-    <div class="days-input-container">
-      <label for="days-difference">Enter the number of days:</label>
-      <input
-        type="number"
-        id="days-difference"
-        v-model="daysDifference"
-        min="1"
-        placeholder="Enter days"
-      />
-    </div>
+    <div v-else>
+      <div v-if="showStaleAlert" class="alert">
+        ⚠️ No humidity updates received in the last 10 minutes!
+      </div>
+      <div class="days-input-container">
+        <label for="days-difference">Enter the number of days:</label>
+        <input
+          type="number"
+          id="days-difference"
+          v-model="daysDifference"
+          min="1"
+          placeholder="Enter days"
+        />
+      </div>
 
-    <div class="plant-status-container">
-      <h1>Is my plant okay?</h1>
-      <h2>{{ plantStatus }}</h2>
-    </div>
-    <div class="current-time-container">
-      <p class="current-time">{{ currentTime }}</p>
-      <p class="last-update">Last update: {{ timeSinceLastUpdate }}</p>
-    </div>
+      <div class="plant-status-container">
+        <h1>Is my plant okay?</h1>
+        <h2>{{ plantStatus }}</h2>
+      </div>
+      <div class="current-time-container">
+        <p class="current-time">{{ currentTime }}</p>
+        <p class="last-update">Last update: {{ timeSinceLastUpdate }}</p>
+      </div>
 
-    <div class="chart-container">
-      <h2>
-        Humidity:
-        <span :style="{ color: humidity >= 60 ? 'green' : 'red' }"
-          >{{ humidity }}%</span
-        >
-      </h2>
-      <LineChart :labels="humidityTimestamps" :values="humidityValues" />
+      <div class="chart-container">
+        <h2>
+          Humidity:
+          <span :style="{ color: humidity >= 60 ? 'green' : 'red' }"
+            >{{ humidity }}%</span
+          >
+        </h2>
+        <LineChart :labels="humidityTimestamps" :values="humidityValues" />
+      </div>
     </div>
   </div>
 </template>
