@@ -1,4 +1,8 @@
-import { PlantPostRequest, PlantPostResponse } from "./types";
+import {
+  PlantPostRequest,
+  PlantPostResponse,
+  GetAllPlantsResponse,
+} from "./types";
 import { handleRequest } from "@/services/api-client";
 import { ApiRoutes, HttpMethods } from "@/enums/paths";
 
@@ -32,5 +36,12 @@ export async function deletePlant(id: number): Promise<PlantPostResponse> {
   return handleRequest<PlantPostResponse>(
     `${ApiRoutes.PLANT}/${id}`,
     HttpMethods.DELETE
+  );
+}
+
+export async function getPlants(): Promise<GetAllPlantsResponse> {
+  return handleRequest<GetAllPlantsResponse>(
+    `${ApiRoutes.PLANT}/`,
+    HttpMethods.GET
   );
 }

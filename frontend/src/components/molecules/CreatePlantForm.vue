@@ -15,7 +15,6 @@
 <script setup>
   import { defineProps, defineEmits, ref, watch } from "vue";
 
-  // Propriedades recebidas pelo componente
   const props = defineProps({
     modelValue: {
       type: [String, Number],
@@ -43,13 +42,10 @@
     },
   });
 
-  // Evento que emite a alteração do valor
   const emit = defineEmits(["update:modelValue"]);
 
-  // Variável interna para o v-model
   const internalValue = ref(props.modelValue);
 
-  // Watcher para atualizar a `modelValue` quando o valor interno for alterado
   watch(internalValue, (newValue) => {
     emit("update:modelValue", newValue);
   });

@@ -27,4 +27,10 @@ async function handleRequest<T>(
   }
 }
 
-export { handleRequest };
+function getBackendUrl() {
+  const host = window.location.hostname;
+  const port = 8000;
+  return `http://${host}:${port}/`;
+}
+
+export { handleRequest, getBackendUrl };

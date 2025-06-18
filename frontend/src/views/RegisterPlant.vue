@@ -38,45 +38,34 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref } from "vue";
   import { createPlant } from "@/services/plantService/plantService";
-  import Input from "@/components/molecules/create-plant-form.vue";
+  import Input from "@/components/molecules/CreatePlantForm.vue";
+  const form = ref({
+    name: "",
+    moisture_threshold: null,
+    check_interval: null,
+  });
 
-  export default {
-    components: {
-      Input,
-    },
-    data() {
-      return {
-        form: {
-          name: "",
-          moisture_threshold: null,
-          check_interval: null,
-        },
-        loading: false,
-        error: null,
-        success: false,
-      };
-    },
-    methods: {
-      async submitForm() {
-        this.loading = true;
-        this.error = null;
-        this.success = false;
+  const loading = ref(false);
+  const error = ref(null);
+  const success = ref(false);
 
-        try {
-          const response = await createPlant(this.form);
-          console.log(response);
+  const submitForm = async () => {
+    loading.value = true;
+    error.value = null;
+    success.value = false;
 
-          this.success = true;
-        } catch (err) {
-          console.error(err);
-          this.error = "There was an error while registering the plant.";
-        } finally {
-          this.loading = false;
-        }
-      },
-    },
+    try {
+      await createPlant(form.value);
+      success.value = true;
+    } catch (err) {
+      console.error(err);
+      error.value = "There was an error while registering the plant.";
+    } finally {
+      loading.value = false;
+    }
   };
 </script>
 
